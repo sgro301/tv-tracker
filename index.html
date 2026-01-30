@@ -684,9 +684,54 @@
       { id: 136, title: "The Faithful", status: "new", season: 1, premiereDate: "2026-03-22", network: "Fox", dayOfWeek: "Saturday", time: "8:00 PM", episodeType: "premiere" }
     ];
 
-    // State
-    let shows = [...initialShows];
-    let selectedShows = new Set(shows.map(s => s.id));
+    // Load saved data from localStorage
+    function loadFromStorage() {
+      try {
+        const savedShows = localStorage.getItem('tvTrackerShows');
+        const savedSelected = localStorage.getItem('tvTrackerSelected');
+
+        if (savedShows) {
+          const parsed = JSON.parse(savedShows);
+          // Convert date strings back to Date objects
+          return parsed.map(show => ({
+            ...show,
+            premiereDate: show.premiereDate // Keep as string for consistency
+          }));
+        }
+
+        return null;
+      } catch (e) {
+        console.error('Error loading from storage:', e);
+        return null;
+      }
+    }
+
+    function loadSelectedFromStorage() {
+      try {
+        const savedSelected = localStorage.getItem('tvTrackerSelected');
+        if (savedSelected) {
+          return new Set(JSON.parse(savedSelected));
+        }
+        return null;
+      } catch (e) {
+        console.error('Error loading selected from storage:', e);
+        return null;
+      }
+    }
+
+    // Save to localStorage
+    function saveToStorage() {
+      try {
+        localStorage.setItem('tvTrackerShows', JSON.stringify(shows));
+        localStorage.setItem('tvTrackerSelected', JSON.stringify([...selectedShows]));
+      } catch (e) {
+        console.error('Error saving to storage:', e);
+      }
+    }
+
+    // State - Load from storage or use defaults
+    let shows = loadFromStorage() || [...initialShows];
+    let selectedShows = loadSelectedFromStorage() || new Set(shows.map(s => s.id));
     let filterMode = 'none'; // 'none', 'week', 'available'
     let currentView = 'list';
     const currentDate = new Date('2026-02-01');
@@ -772,11 +817,11 @@
 
       shows.push(newShow);
       selectedShows.add(newShow.id);
+      saveToStorage(); // Save after adding
       document.getElementById('searchModal').classList.remove('show');
       document.getElementById('searchInput').value = '';
       document.getElementById('searchResults').innerHTML = '';
       render();
-      alert(`Added "${title}"! You can edit the date/time by clicking the show card.`);
     }
 
     function getFilteredShows() {
@@ -989,6 +1034,7 @@
         const id = parseInt(e.target.dataset.id);
         shows = shows.filter(s => s.id !== id);
         selectedShows.delete(id);
+        saveToStorage(); // Save after deleting
         render();
         return;
       }
@@ -999,6 +1045,7 @@
       } else {
         selectedShows.add(id);
       }
+      saveToStorage(); // Save after toggling
       render();
     });
 
@@ -1067,6 +1114,7 @@
       };
       shows.push(newShow);
       selectedShows.add(newShow.id);
+      saveToStorage(); // Save after adding
       document.getElementById('addModal').classList.remove('show');
       document.getElementById('addForm').reset();
       render();
